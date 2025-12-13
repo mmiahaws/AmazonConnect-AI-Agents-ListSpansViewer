@@ -116,6 +116,62 @@ aws cloudformation describe-stacks \
         Export JSON - Download the raw response as a file
         Copy Raw - Copy the JSON to clipboard
 
+
+🔍 Finding Your Assistant ID and Session ID
+
+To use the ListSpans Viewer, you need two pieces of information:
+
+    Assistant ID - Identifies your Amazon Connect AI Agent
+    Session ID - Identifies a specific conversation/call session
+
+Method 1: From Contact Flow Logs (CloudWatch)
+
+The easiest way to find these IDs is from your Amazon Connect contact flow logs in CloudWatch.
+
+Step 1: Enable Contact Flow Logging
+
+Ensure your contact flow has logging enabled (Set logging behavior block).
+
+Step 2: Find the Logs in CloudWatch
+
+    Go to CloudWatch → Log groups
+    Find your Connect instance log group: /aws/connect/<instance-name>
+    Search for your contact using the Contact ID or timestamp
+
+Step 3: Find the Assistant ID
+
+Look for the SetWisdomAssistant log entry:
+
+{
+    "ContactId": "e53230fc-855d-4724-ad7f-7b024c64444b",
+    "ContactFlowModuleType": "SetWisdomAssistant",
+    "Identifier": "Create Connect Assistant session",
+    "Parameters": {
+        "WisdomAssistantArn": "arn:aws:wisdom:us-west-2:445149420241:assistant/4738423e-4752-4a2a-9593-bfe4b21e1635"
+    }
+}
+
+The Assistant ID is the UUID after /assistant/:
+
+4738423e-4752-4a2a-9593-bfe4b21e1635
+
+Step 4: Find the Session ID
+
+Look for the SetContactData log entry that contains WisdomSessionArn:
+
+{
+    "ContactId": "e53230fc-855d-4724-ad7f-7b024c64444b",
+    "ContactFlowModuleType": "SetContactData",
+    "Identifier": "Create Connect Assistant session-y2aiuEqbZB",
+    "Parameters": {
+        "WisdomSessionArn": "arn:aws:wisdom:us-west-2:445149420241:session/4738423e-4752-4a2a-9593-bfe4b21e1635/c976d916-98ba-46d8-a82a-7e8dd493e94e"
+    }
+}
+
+The Session ID is the UUID after /session/<assistant-id>/:
+
+c976d916-98ba-46d8-a82a-7e8dd493e94e
+
 🔧 Configuration
 
 CloudFormation Parameters

@@ -242,13 +242,7 @@ deployment-package/
 
 ## Screenshots
 
-> Add screenshots to a `screenshots/` folder in the repo. Suggested screenshots:
-> - `main-dashboard.png` — The main page with session loaded
-> - `timeline-view.png` — Timeline tab showing spans
-> - `transcript-view.png` — Transcript tab with customer/AI messages
-> - `sequence-diagram.png` — Sequence diagram tab
-> - `browse-sessions.png` — Browse Logs modal with sessions listed
-> - `cloudshell-deploy.png` — CloudShell deployment in progress
+
 
 ## Version
 

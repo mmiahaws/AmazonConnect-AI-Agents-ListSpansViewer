@@ -1,326 +1,260 @@
-# AmazonConnect-AI-Agents-ListSpansViewer
-Web Based Viewer for ListSpansAPI
-# ListSpans Viewer for Amazon Connect AI Agents
+# ListSpans Viewer
 
-[![AWS CloudFormation](https://img.shields.io/badge/AWS-CloudFormation-orange?logo=amazon-aws)](https://aws.amazon.com/cloudformation/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-5.1.0-blue.svg)](https://github.com/yourusername/listspans-viewer/releases)
+A web-based viewer for Amazon Connect AI Agent sessions. Browse, replay, and debug conversations between customers and AI Agents powered by Amazon Connect AI Agents.
 
-A web-based visualization tool for the Amazon Connect AI Agents [ListSpans API](https://docs.aws.amazon.com/amazon-q-connect/latest/APIReference/API_ListSpans.html). Deploy with a single CloudFormation template and instantly start debugging and analyzing your AI agent sessions.
+![Transcript View](screenshots/sequence-diagram.png)
 
-![ListSpans Viewer Screenshot](docs/screenshot.png)
+## What It Does
 
-## 🎯 What is This?
+ListSpans Viewer connects to your Amazon Connect instance and lets you:
 
-When building AI agents with Amazon Connect, debugging agent behavior can be challenging. The ListSpans API provides detailed telemetry about what happened during an agent session, including:
+- **Browse Sessions** — Scan CloudWatch Logs to discover recent AI Agent conversations
+- **View Timeline** — See all conversation events (spans) in chronological order
+- **Read Transcripts** — Chat-style view showing customer messages and AI responses with clear badges
+- **Sequence Diagrams** — Visual flow of the conversation between customer, AI agent, and tools
+- **Debug Tools** — Inspect every tool execution, its input/output, and duration
+- **Track Errors** — Identify failed spans and troubleshoot AI Agent issues
 
-- **Inference calls** - LLM invocations with input/output messages
-- **Tool executions** - Which tools were called and their results
-- **Agent invocations** - Sub-agent calls and orchestration
-- **Token usage** - Input/output token counts per call
-- **Timing data** - Duration of each operation
-- **Error details** - What went wrong and where
+![Session Timeline](screenshots/timeline-view.png)
 
-This tool provides a clean, visual interface to explore this data without writing code or using the AWS CLI.
+## Architecture
 
-## ✨ Features
+```
+User Browser
+    ↓
+CloudFront (HTTPS)
+    ↓
+S3 Bucket (Private, OAC)
+    ↓
+API Gateway (HTTP API)
+    ↓
+Lambda Functions
+    ├── GetConfig    → Returns deployment settings
+    ├── ListSpans    → Fetches AI Agent spans via Wisdom API
+    └── BrowseLogs   → Scans CloudWatch Logs for sessions
+        ↓
+    ┌───┴───┐
+    ↓       ↓
+ListSpansAPI  CloudWatch Logs
+```
 
-- 🚀 **One-Click Deploy** - Single CloudFormation template deploys everything
-- 🔐 **Secure** - Uses IAM roles, no credentials in the browser
-- 🎨 **Visual Interface** - Color-coded spans, expandable details, syntax highlighting
-- 🔍 **Filtering** - Filter by span type (inference, tool, agent) or errors
-- 📊 **Statistics** - Token counts, success/error rates at a glance
-- 📋 **Export** - Download raw JSON or copy to clipboard
-- 🌐 **Multi-Region** - Query any supported AWS region
-- ⚡ **Serverless** - No servers to manage, scales automatically
+Everything deploys via a single CloudFormation template. No servers to manage.
 
-## 🏗️ Architecture
+## Prerequisites
 
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │ CloudFront │────▶│ S3 Bucket │ │ Amazon Connect │ │ Distribution │ │ (index.html) │ │ AI Agents │ └────────┬────────┘ └─────────────────┘ └────────▲────────┘ │ │ │ API calls │ ListSpans ▼ │ ┌─────────────────┐ ┌─────────────────┐ │ │ API Gateway │────▶│ Lambda │──────────────┘ │ (HTTP API) │ │ (Python 3.12) │ └─────────────────┘ └─────────────────┘
+- An AWS account with appropriate permissions
+- Amazon Connect instance with AI Agent enabled
+- CloudWatch Logs enabled for your Connect instance
+- AWS CLI installed and configured (or use AWS CloudShell)
 
+### Required IAM Permissions
 
-**Components:**
-- **CloudFront** - CDN for fast, secure content delivery
-- **S3** - Hosts the static web application
-- **API Gateway** - HTTP API endpoint for the Lambda function
-- **Lambda** - Signs requests and calls the ListSpans API
+Your deploying user/role needs permissions to create:
+- S3 buckets and bucket policies
+- CloudFront distributions
+- Lambda functions
+- API Gateway (HTTP API)
+- IAM roles
 
-## 🚀 Quick Start
+## What You'll Need
 
-### Prerequisites
+Before deploying, gather these values:
 
-- AWS Account with appropriate permissions
-- Amazon Connect AI Agents instance with sessions to analyze
-- AWS CLI configured (optional, for CLI deployment)
+| Value | Format | Where to Find |
+|-------|--------|---------------|
+| Assistant ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Connect console → AI Agents → Your Agent → Assistant ID |
+| Log Group | `/aws/connect/YOUR_INSTANCE_ALIAS` | Connect console → Your instance → Note the alias |
+| Region | e.g. `us-west-2`, `eu-west-2` | The region where your Connect instance lives |
+| Connect Instance ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Connect console → Your instance (optional) |
 
-### Deploy via AWS Console
+## Deployment
 
-1. Click the button below to launch the stack:
+### Option 1: AWS CloudShell 
 
-   [![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=listspans-viewer&templateURL=https://your-bucket.s3.amazonaws.com/template.yaml)
-
-2. Or manually:
-   - Go to [CloudFormation Console](https://console.aws.amazon.com/cloudformation)
-   - Click **Create stack** → **With new resources**
-   - Upload the `template.yaml` file
-   - Enter a stack name (e.g., `listspans-viewer`)
-   - Configure parameters (optional)
-   - Check "I acknowledge that AWS CloudFormation might create IAM resources"
-   - Click **Create stack**
-
-3. Wait for stack creation (~3-5 minutes)
-
-4. Find the **WebsiteURL** in the Outputs tab
-
-### Deploy via AWS CLI
+1. Download the zip from this repo: `listspans-viewer-v2-deployment.zip`
+2. Open [AWS CloudShell](https://console.aws.amazon.com/cloudshell/) in the region where your Connect instance lives
+3. Upload the zip: click **Actions → Upload file**
+4. Run:
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/listspans-viewer.git
-cd listspans-viewer
+unzip listspans-viewer-v2-deployment.zip
+cd deployment-package
+chmod +x deploy.sh cleanup.sh
+./deploy.sh
+```
 
-# Deploy the stack
-aws cloudformation create-stack \
-  --stack-name listspans-viewer \
-  --template-body file://template.yaml \
-  --capabilities CAPABILITY_IAM
+5. Follow the prompts — enter your Assistant ID, Log Group, and region
+6. The script outputs your CloudFront URL when done
 
-# Wait for completion
-aws cloudformation wait stack-create-complete --stack-name listspans-viewer
+![CloudShell Deployment](screenshots/cloudshell-deploy.png)
 
-# Get the website URL
-aws cloudformation describe-stacks \
-  --stack-name listspans-viewer \
-  --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' \
-  --output text
+### Option 2: Mac / Linux
 
-📖 Usage
+```bash
+# Clone the repo
+git clone https://gitlab.aws.dev/mmiahaws/ListSpansViewer.git
+cd ListSpansViewer/deployment-package
 
-    Open the Website URL from CloudFormation outputs
+# Make scripts executable
+chmod +x deploy.sh cleanup.sh
 
-    Enter Query Parameters:
-        Region - AWS region where your AI agent is deployed
-        Assistant ID - Your Amazon Connect AI Agent assistant ID
-        Session ID - The session ID you want to analyze
-        Max Results - Number of spans to retrieve (1-1000)
+# Deploy
+./deploy.sh
+```
 
-    Click "Fetch Spans" to retrieve the data
+The script prompts for all required values. Defaults are provided where possible — just press Enter to accept them.
 
-    Explore the Results:
-        Click on any span card to expand details
-        Use filter chips to show specific span types
-        View input/output messages, tool calls, and raw attributes
-        Check the statistics bar for quick insights
+**Prompt values:**
+- Stack Name → lowercase, hyphens only (e.g. `listspans-viewer`)
+- Region → where your Connect instance is (e.g. `eu-west-2`)
+- Assistant ID → UUID from Connect console
+- Log Group → `/aws/connect/your-instance-alias`
+- Instance ID → optional, press Enter to skip
+- Project Name → lowercase, hyphens only (e.g. `listspans-viewer`)
 
-    Export Data:
-        Export JSON - Download the raw response as a file
-        Copy Raw - Copy the JSON to clipboard
+### Option 3: Windows (PowerShell)
 
+```powershell
+# Clone the repo
+git clone https://gitlab.aws.dev/mmiahaws/ListSpansViewer.git
+cd ListSpansViewer\deployment-package
 
-🔍 Finding Your Assistant ID and Session ID
+# Deploy
+.\deploy.ps1
+```
 
-To use the ListSpans Viewer, you need two pieces of information:
+**Windows requirements:**
+- PowerShell 5.1+ (built into Windows 10/11)
+- AWS CLI installed — [download here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- AWS credentials configured (`aws configure`)
 
-    Assistant ID - Identifies your Amazon Connect AI Agent
-    Session ID - Identifies a specific conversation/call session
+The PowerShell script has the same prompts as the bash version.
 
-Method 1: From Contact Flow Logs (CloudWatch)
 
-The easiest way to find these IDs is from your Amazon Connect contact flow logs in CloudWatch.
+## Usage
 
-Step 1: Enable Contact Flow Logging
+Once deployed, open the CloudFront URL in your browser.
 
-Ensure your contact flow has logging enabled (Set logging behavior block).
+### Browse Sessions
 
-Step 2: Find the Logs in CloudWatch
+1. Click **Browse Logs** on the main page
+2. Set the time range (default: 24 hours)
+3. Click **Scan Logs** to find sessions
+4. Click any session to load its spans
 
-    Go to CloudWatch → Log groups
-    Find your Connect instance log group: /aws/connect/<instance-name>
-    Search for your contact using the Contact ID or timestamp
+![Browse Sessions](screenshots/browse-sessions.png)
 
-Step 3: Find the Assistant ID
+### View a Session
 
-Look for the SetWisdomAssistant log entry:
+Enter a Session ID directly, or pick one from Browse Logs. The viewer shows:
 
-{
-    "ContactId": "e53230fc-855d-4724-ad7f-7b024c64444b",
-    "ContactFlowModuleType": "SetWisdomAssistant",
-    "Identifier": "Create Connect Assistant session",
-    "Parameters": {
-        "WisdomAssistantArn": "arn:aws:wisdom:us-west-2:445149420241:assistant/4738423e-4752-4a2a-9593-bfe4b21e1635"
-    }
-}
+- **Timeline** — chronological list of all spans with duration and status
+- **Transcript** — customer and AI messages in a chat-style layout
+- **Sequence Diagram** — visual flow between participants
+- **Tool Details** — expand any tool span to see inputs/outputs
 
-The Assistant ID is the UUID after /assistant/:
 
-4738423e-4752-4a2a-9593-bfe4b21e1635
+![Transcript View](screenshots/transcript-view.png)
 
-Step 4: Find the Session ID
+## Cleanup
 
-Look for the SetContactData log entry that contains WisdomSessionArn:
+When you're done, remove all deployed resources.
 
-{
-    "ContactId": "e53230fc-855d-4724-ad7f-7b024c64444b",
-    "ContactFlowModuleType": "SetContactData",
-    "Identifier": "Create Connect Assistant session-y2aiuEqbZB",
-    "Parameters": {
-        "WisdomSessionArn": "arn:aws:wisdom:us-west-2:445149420241:session/4738423e-4752-4a2a-9593-bfe4b21e1635/c976d916-98ba-46d8-a82a-7e8dd493e94e"
-    }
-}
+### Mac / Linux / CloudShell
 
-The Session ID is the UUID after /session/<assistant-id>/:
+```bash
+cd deployment-package
+./cleanup.sh
+```
 
-c976d916-98ba-46d8-a82a-7e8dd493e94e
+### Windows
 
-🔧 Configuration
+```powershell
+cd deployment-package
+.\cleanup.ps1
+```
 
-CloudFormation Parameters
+Both scripts will:
+1. Show all resources that will be deleted
+2. Ask you to type `yes-delete-all` to confirm
+3. Empty the S3 bucket
+4. Delete the entire CloudFormation stack (all ~19 resources)
+5. Wait for deletion to complete (10-15 min due to CloudFront)
 
-Parameter
-	
+After cleanup, the scripts show optional commands to delete Lambda CloudWatch Log Groups if you want a completely clean slate.
 
-Default
-	
+### Manual Cleanup
 
-Description
+If you prefer to clean up manually:
 
-ProjectName
-	
-
-listspans-viewer
-	
-
-Prefix for all resource names
-
-DefaultAssistantId
-	
-
-(empty)
-	
-
-Pre-populated Assistant ID in the UI
-
-Customizing the Default Assistant ID
-
-aws cloudformation update-stack \
-  --stack-name listspans-viewer \
-  --template-body file://template.yaml \
-  --parameters ParameterKey=DefaultAssistantId,ParameterValue=your-assistant-id \
-  --capabilities CAPABILITY_IAM
-
-🔒 Security
-
-    No credentials in browser - The Lambda function uses IAM roles to authenticate
-    HTTPS only - CloudFront enforces TLS
-    Private S3 bucket - Origin Access Control restricts direct S3 access
-    Minimal permissions - Lambda role only has wisdom:* and qconnect:* permissions
-
-IAM Permissions Required for Deployment
-
-The deploying user/role needs:
-
-    cloudformation:* - Stack management
-    s3:* - Bucket creation and management
-    lambda:* - Function creation
-    apigateway:* - API Gateway setup
-    cloudfront:* - Distribution creation
-    iam:* - Role creation (with CAPABILITY_IAM)
-
-🐛 Troubleshooting
-
-"No spans found for this session"
-
-    Verify the session ID is correct
-    Ensure the session has completed at least one turn
-    Check that the region matches where the agent is deployed
-
-"AccessDeniedException"
-
-    The Lambda execution role may not have permission to call ListSpans
-    Verify the assistant ID is in the same AWS account
-
-"ResourceNotFoundException"
-
-    The assistant ID or session ID doesn't exist
-    Double-check both IDs and the region
-
-Stale Content After Update
-
-Clear the CloudFront cache:
-
-aws cloudfront create-invalidation \
-  --distribution-id YOUR_DIST_ID \
-  --paths "/*"
-
-Or wait for the cache to expire (~24 hours) and hard refresh your browser.
-
-🧪 Testing the Lambda Directly
-
-aws lambda invoke \
-  --function-name listspans-viewer-list-spans \
-  --payload '{
-    "requestContext": {"http": {"method": "POST"}},
-    "body": "{\"region\":\"us-west-2\",\"assistantId\":\"YOUR_ASSISTANT_ID\",\"sessionId\":\"YOUR_SESSION_ID\",\"maxResults\":100}"
-  }' \
-  --cli-binary-format raw-in-base64-out \
-  response.json
-
-cat response.json | jq .
-
-📁 Project Structure
-
-listspans-viewer/
-├── template.yaml          # CloudFormation template (all-in-one)
-├── README.md              # This file
-├── LICENSE                # MIT License
-└── docs/
-    └── screenshot.png     # UI screenshot
-
-🔄 Updating
-
-To update to a new version:
-
-aws cloudformation update-stack \
-  --stack-name listspans-viewer \
-  --template-body file://template.yaml \
-  --capabilities CAPABILITY_IAM
-
-🗑️ Cleanup
-
-To remove all resources:
-
-# Empty the S3 bucket first (required)
+```bash
+# Get bucket name
 BUCKET=$(aws cloudformation describe-stacks \
-  --stack-name listspans-viewer \
-  --query 'Stacks[0].Outputs[?OutputKey==`S3Bucket`].OutputValue' \
+  --stack-name YOUR_STACK_NAME \
+  --region YOUR_REGION \
+  --query 'Stacks[0].Outputs[?OutputKey==`S3BucketName`].OutputValue' \
   --output text)
 
-aws s3 rm s3://$BUCKET --recursive
+# Empty bucket
+aws s3 rm s3://$BUCKET --recursive --region YOUR_REGION
 
-# Delete the stack
-aws cloudformation delete-stack --stack-name listspans-viewer
+# Delete stack
+aws cloudformation delete-stack --stack-name YOUR_STACK_NAME --region YOUR_REGION
 
-🤝 Contributing
+# Wait for deletion
+aws cloudformation wait stack-delete-complete --stack-name YOUR_STACK_NAME --region YOUR_REGION
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Troubleshooting
 
-    Fork the repository
-    Create your feature branch (git checkout -b feature/AmazingFeature)
-    Commit your changes (git commit -m 'Add some AmazingFeature')
-    Push to the branch (git push origin feature/AmazingFeature)
-    Open a Pull Request
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| "Parameter ProjectName failed to satisfy constraint" | Uppercase or special characters in name | Use only lowercase letters, numbers, and hyphens |
+| "Failed to load configuration" | CloudFront still propagating | Wait 2-3 minutes, then hard refresh (Ctrl+Shift+R) |
+| No sessions found | Wrong log group or no conversations yet | Verify log group name, try increasing time range to 72h |
+| Browse Logs returns 0 sessions | Log group doesn't contain AI Agent logs | Check your Connect instance has CloudWatch logging enabled |
+| API errors when fetching spans | Wrong Assistant ID | Verify the UUID in Connect console |
+| Stack creation fails | Missing IAM permissions | Ensure your user can create S3, CloudFront, Lambda, API Gateway, IAM roles |
 
-📝 License
+## Security
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- S3 bucket is private — no public access, all public access blocked
+- CloudFront uses Origin Access Control (OAC) to access S3
+- API Gateway has CORS configured for browser access
+- Lambda functions use least-privilege IAM roles
+- All traffic is HTTPS
 
-🙏 Acknowledgments
+## Package Contents
 
-    Built for debugging Amazon Connect AI Agents
-    Uses the ListSpans API
+```
+deployment-package/
+├── cloudformation-template.yaml   # Full CloudFormation template
+├── v2_frontend.html               # Frontend application
+├── deploy.sh                      # Mac/Linux/CloudShell deploy script
+├── deploy.ps1                     # Windows PowerShell deploy script
+├── cleanup.sh                     # Mac/Linux/CloudShell cleanup script
+├── cleanup.ps1                    # Windows PowerShell cleanup script
+├── QUICKSTART.md                  # 5-minute quick start
+├── DEPLOYMENT_GUIDE.md            # Detailed deployment guide
+├── README.md                      # Package readme
+└── README-WINDOWS.md              # Windows-specific instructions
+```
 
-📫 Support
+## Screenshots
 
-    🐛 Report a bug
-    💡 Request a feature
-    📖 Amazon Connect AI Agents Documentation
+> Add screenshots to a `screenshots/` folder in the repo. Suggested screenshots:
+> - `main-dashboard.png` — The main page with session loaded
+> - `timeline-view.png` — Timeline tab showing spans
+> - `transcript-view.png` — Transcript tab with customer/AI messages
+> - `sequence-diagram.png` — Sequence diagram tab
+> - `browse-sessions.png` — Browse Logs modal with sessions listed
+> - `cloudshell-deploy.png` — CloudShell deployment in progress
+
+## Version
+
+v2.0 — Production Ready
+
+## Author
+
+Mo Miah (mmiahaws)
+
